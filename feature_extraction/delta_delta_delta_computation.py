@@ -5,8 +5,8 @@ import librosa
 from tqdm import tqdm
 
 # === Paths ===
-input_tensor_dir = "C:/Users/felip/teamlab-phonetics/feature_extraction/lfcc_segment_outputs/lfcc_dev"
-output_tensor_dir = "C:/Users/felip/teamlab-phonetics/feature_extraction/lfcc_segment_outputs/lfcc_tensors_dev_set_with_delta"
+input_tensor_dir = "C:/Users/felip/teamlab-phonetics/feature_extraction/lfcc_segment_outputs/lfcc_eval"
+output_tensor_dir = "C:/Users/felip/teamlab-phonetics/feature_extraction/lfcc_segment_outputs/lfcc_tensors_eval_set_with_delta"
 os.makedirs(output_tensor_dir, exist_ok=True)
 
 # === Process all saved log-mel tensors ===
