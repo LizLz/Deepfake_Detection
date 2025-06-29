@@ -1,18 +1,139 @@
 import streamlit as st
+import torch
+import torch.nn as nn
+import torchaudio
+import torchaudio.transforms as T
+import torchaudio.functional as F
+import numpy as np
+import matplotlib.pyplot as plt
 import os
-from lfcc_delta_extraction import *
-from spectrogram_generation import *
-from pytorch_model_lfcc import *
 
-st.title("Deepfake Audio Detection (PyTorch, LFCC+Delta)")
+# --------------------------
+# 1. Define your model class
+# --------------------------
+class SpoofDetectionModel(nn.Module):
+    def __init__(self, hidden_dim, fc1_input_dim, dropout_prob=0.5):
+        super(SpoofDetectionModel, self).__init__()
+        self.conv1 = nn.Conv1d(in_channels=120, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.pool = nn.MaxPool1d(kernel_size=2, stride=2, padding=0)
+        self.dropout = nn.Dropout(dropout_prob)
+        self.fc1 = nn.Linear(fc1_input_dim, hidden_dim)
+        self.fc3 = nn.Linear(hidden_dim, 1)
+        self.init_weights()
+        
+    def init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv1d) or isinstance(m, nn.Linear):
+                torch.nn.init.kaiming_uniform_(m.weight, mode='fan_in', nonlinearity='relu')
+                if m.bias is not None:
+                    torch.nn.init.zeros_(m.bias)
+        
+    def forward(self, x):
+        # x: [batch, 120, timeframes]
+        x = self.pool(torch.relu(self.conv1(x)))
+        x = self.pool(torch.relu(self.conv2(x)))
+        x = self.dropout(x)
+        x = x.view(x.size(0), -1)
+        x = torch.relu(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc3(x)
+        return x
+
+# --------------------------
+# 2. Utility functions
+# --------------------------
+
+def limit_audio_length(waveform, sr, target_sec=4):
+    target_samples = target_sec * sr
+    current_samples = waveform.shape[1]
+    if current_samples > target_samples:
+        return waveform[:, :target_samples]
+    else:
+        repeats = (target_samples // current_samples) + 1
+        extended = waveform.repeat(1, repeats)
+        return extended[:, :target_samples]
+
+EXPECTED_TIMEFRAMES = 126  # Must match training
+
+def extract_lfcc_delta(audio_path):
+    waveform, sr = torchaudio.load(audio_path)
+    if waveform.shape[0] > 1:
+        waveform = waveform.mean(dim=0, keepdim=True)
+    waveform = limit_audio_length(waveform, sr)
+    lfcc_transform = T.LFCC(
+        sample_rate=sr,
+        n_lfcc=40,
+        speckwargs={"n_fft": 2048, "hop_length": 512}
+    )
+    lfcc = lfcc_transform(waveform).squeeze(0)  # [40, timeframes]
+    delta = F.compute_deltas(lfcc)
+    delta2 = F.compute_deltas(delta)
+    features = torch.cat([lfcc, delta, delta2], dim=0)  # [120, timeframes]
+
+    # --- Pad or crop to expected timeframes ---
+    current_frames = features.shape[1]
+    if current_frames < EXPECTED_TIMEFRAMES:
+        pad_width = EXPECTED_TIMEFRAMES - current_frames
+        features = torch.nn.functional.pad(features, (0, pad_width))
+    elif current_frames > EXPECTED_TIMEFRAMES:
+        features = features[:, :EXPECTED_TIMEFRAMES]
+    # ------------------------------------------
+    return features
+
+def save_spectrogram_image(audio_path, output_path='melspectrogram.png'):
+    waveform, sr = torchaudio.load(audio_path)
+    if waveform.shape[0] > 1:
+        waveform = waveform.mean(dim=0, keepdim=True)
+    waveform = waveform.squeeze()
+    mel_spec = torchaudio.transforms.MelSpectrogram(sample_rate=sr)(waveform)
+    mel_spec_db = torchaudio.transforms.AmplitudeToDB()(mel_spec)
+    plt.figure(figsize=(4, 4))
+    plt.axis('off')
+    plt.tight_layout()
+    plt.imshow(mel_spec_db.numpy(), aspect='auto', origin='lower')
+    plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
+    plt.close()
+    return output_path
+
+def predict_with_pytorch(model, features):
+    # features: [120, timeframes]
+    print("features.shape before unsqueeze:", features.shape)
+    input_tensor = features.unsqueeze(0)  # [1, 120, timeframes]
+    print("input_tensor.shape after unsqueeze:", input_tensor.shape)
+    input_tensor = input_tensor.to(next(model.parameters()).device)
+    with torch.no_grad():
+        logit = model(input_tensor).item()
+    pred = int(logit > 0)
+    prob = torch.sigmoid(torch.tensor(logit)).item()
+    return pred, prob
+
+# --------------------------
+# 3. Model loading function
+# --------------------------
+@st.cache_resource
+def load_model():
+    hidden_dim = 128
+    dropout_prob = 0.5
+    fc1_input_dim = 1984  # 64 * 31, calculated from your conv/pool stack
+    model = SpoofDetectionModel(hidden_dim=hidden_dim, fc1_input_dim=fc1_input_dim, dropout_prob=dropout_prob)
+    state_dict = torch.load("lfcc_with_delta_v2_updated_model_deepfake_audio_detection_model.pt", map_location="cpu")
+    model.load_state_dict(state_dict)
+    model.eval()
+    return model
+
+# --------------------------
+# 4. Streamlit App
+# --------------------------
+st.title("Deepfake Audio Detection (PyTorch, LFCC + Delta + Delta-Delta)")
 
 uploaded_file = st.file_uploader("Upload a WAV file", type="wav")
 if uploaded_file:
-    # Save file locally
-    audio_path = os.path.join("audio_files", uploaded_file.name)
     os.makedirs("audio_files", exist_ok=True)
+    audio_path = os.path.join("audio_files", uploaded_file.name)
     with open(audio_path, "wb") as f:
         f.write(uploaded_file.read())
+
     st.audio(audio_path)
 
     st.write("### Spectrogram")
@@ -20,12 +141,12 @@ if uploaded_file:
     st.image(spec_img_path)
 
     st.write("### Classification")
-    # Extract features
-    lfcc_features = extract_lfcc_features(audio_path)
-    # Load your PyTorch model (ensure you load once, not every time)
-    model = torch.load("lfcc_with_delta_v2_updated_model_deepfake_audio_detection_model.pth", map_location="cpu")
-    model.eval()
-    pred, prob = predict_with_pytorch(model, lfcc_features)
-    class_names = ["bonafide", "spoof"]
+    features = extract_lfcc_delta(audio_path)
+    st.write(f"LFCC+delta features shape: {features.shape}")  # Debug: should be [120, timeframes]
+    model = load_model()
+    pred, prob = predict_with_pytorch(model, features)
+    class_names = ["spoof", "bonafide"]
     st.write(f"**Prediction:** {class_names[pred]}")
-    st.write(f"**Probabilities:** {prob}")
+    st.write(f"**Probability (bonafide):** {prob:.3f}")
+else:
+    st.info("Please upload a .wav file")
