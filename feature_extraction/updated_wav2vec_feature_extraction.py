@@ -16,9 +16,9 @@ model.eval()
 # --- Paths and label mapping ---
 label_map = {'bonafide': 1, 'spoof': 0}
 audio_labels = {}
-protocol_path = "D:\\Stuttgart\\(important) Third Semester\\Team lab\\LA\\ASVspoof2019_LA_cm_protocols\\ASVspoof2019.LA.cm.eval.trl.txt"
-audio_base_path = "D:\\Stuttgart\\(important) Third Semester\\Team lab\\LA\\ASVspoof2019_LA_eval\\flac"
-output_tensor_dir = "D:\\Stuttgart\\(important) Third Semester\\Team lab\\wav2vec_eval"
+protocol_path = "D:\\Felipe\\Team Lab\\LA\\ASVspoof2019_LA_cm_protocols\\ASVspoof2019.LA.cm.eval.trl.txt"
+audio_base_path = "D:\\Felipe\\Team Lab\\LA\\ASVspoof2019_LA_eval\\flac"
+output_tensor_dir = "D:\\Felipe\\Team Lab\\teamlab-phonetics\\feature_extraction\\wav2vec_updated_segment_outputs\\wav2vec_updated_eval"
 os.makedirs(output_tensor_dir, exist_ok=True)
 
 # --- Load protocol labels ---
