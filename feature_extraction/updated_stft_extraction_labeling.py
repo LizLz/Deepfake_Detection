@@ -65,4 +65,4 @@ for f in tqdm(audio_files, desc="Extracting and labeling"):
     tensor_output_path = os.path.join(output_tensor_dir, f"{file_id}.pt")
     torch.save((stft_tensor, label), tensor_output_path)
 
-print("✅ All audio processed and saved with labels (STFT extraction).")
+print("All audio processed and saved with labels (STFT extraction).")

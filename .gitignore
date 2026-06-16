@@ -5,7 +5,22 @@ feature_extraction/training_set_audio
 feature_extraction/lfcc_segment_outputs
 feature_extraction/wav2vec_updated_segment_outputs
 feature_extraction/logmel_segment_outputs
-lfcc_dev.zip
-lfcc_eval.zip
-lfcc_train.zip
-.venv
+
+# Ignore an entire folder containing data
+team_lab_deepfake/add_lfcc_with_delta_eval
+team_lab_deepfake/add_lfcc_with_delta_dev
+team_lab_deepfake/add_lfcc_with_delta_train
+team_lab_deepfake/itw_lfcc_with_delta
+team_lab_deepfake/lfcc_tensors_dev_set_with_delta
+team_lab_deepfake/lfcc_tensors_eval_set_with_delta
+team_lab_deepfake/lfcc_tensors_train_set_with_delta
+
+# Ignore all files ending with a specific extension (e.g., all Excel or zip files)
+*.xlsx
+*.zip
+*.tar.gz
+
+# Ignore system files and python cache folders
+__pycache__/
+.DS_Store
+.env

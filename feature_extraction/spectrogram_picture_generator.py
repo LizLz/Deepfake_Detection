@@ -34,4 +34,4 @@ for f in tqdm(selected_files, desc="Plotting spectrograms"):
     plt.savefig(plot_path)
     plt.close()
 
-print(f"✅ Plots saved to {output_plot_dir}")
+print(f"Plots saved to {output_plot_dir}")

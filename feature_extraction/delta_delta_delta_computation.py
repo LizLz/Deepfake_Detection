@@ -29,4 +29,4 @@ for f in tqdm(audio_files, desc="Adding delta features"):
     output_path = os.path.join(output_tensor_dir, f)
     torch.save((logmel_with_deltas_tensor, label), output_path)
 
-print("✅ All log-mel tensors processed and saved with delta and delta-delta features.")
+print("All log-mel tensors processed and saved with delta and delta-delta features.")
