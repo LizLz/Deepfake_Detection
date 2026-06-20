@@ -37,6 +37,7 @@ Deepfake_Detection/
 ├── baseline_model/           # Shared neural structural variations evaluated across diverse audio features
 │   └── ...
 ├── feature_extraction/       # Scripts dedicated to converting raw waveforms to target feature representations
+├── application_frontend      # Built a frontend website so that you can upload audios to detect whether it's fake or authentic based on our classification model
 ├── utility/                  # Shared helper scripts, custom loss criteria, and evaluation functions
 ├── report/                   # LaTeX source files and fully compiled research reports
 ├── README.md                 # Project roadmap and repository documentation
