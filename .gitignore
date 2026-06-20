@@ -15,6 +15,7 @@ team_lab_deepfake/lfcc_tensors_dev_set_with_delta
 team_lab_deepfake/lfcc_tensors_eval_set_with_delta
 team_lab_deepfake/lfcc_tensors_train_set_with_delta
 
+
 # Ignore all files ending with a specific extension (e.g., all Excel or zip files)
 *.xlsx
 *.zip
@@ -24,3 +25,10 @@ team_lab_deepfake/lfcc_tensors_train_set_with_delta
 __pycache__/
 .DS_Store
 .env
+
+# Ignore all papers and documentation files
+team_lab_deepfake/teamlab-phonetics/Literature Review
+
+#ignore all pathlib files
+*.pth
+*threshold.txt
